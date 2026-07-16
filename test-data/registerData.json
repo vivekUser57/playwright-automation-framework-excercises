@@ -1,0 +1,18 @@
+{
+  "name": "Vivek Kumar",
+  "email": "vivek12345@testmail.com",
+  "title": "Mr",
+  "password": "Test@123",
+  "day": "10",
+  "month": "May",
+  "year": "1995",
+  "firstName": "Vivek",
+  "lastName": "Kumar",
+  "address": "Sector 15",
+  "country": "India",
+  "state": "Rajasthan",
+  "city": "Jaipur",
+  "zipcode": "302001",
+  "mobile": "9876543210",
+  "newsletter": true
+}
