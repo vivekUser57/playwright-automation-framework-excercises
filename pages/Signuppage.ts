@@ -109,7 +109,7 @@ export class SignupPage extends BasePage {
     await this.cityInput.fill(user.city);
     await this.zipcodeInput.fill(user.zipcode);
     await this.mobileNumberInput.fill(user.mobile);
-
     await this.createAccountButton.click();
+    
   }
 }
