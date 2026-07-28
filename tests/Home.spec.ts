@@ -41,44 +41,41 @@ test.describe("User Registration", () => {
     await expect(homePage.homePageLogo).toBeVisible();
   });
 
-  // test("TC006 - Contact Us Form", async ({ page }) => {
-  //   const contactDetails = ContactUsFactory.create();
+  test("TC006 - Contact Us Form", async ({ page }) => {
+    const contactDetails = ContactUsFactory.create();
 
-  //   await test.step("Navigate to Contact Us", async () => {
-  //     await contactUsPage.openContactUs();
-  //     await expect(page).toHaveURL(URLS.CONTACT_US);
-  //     await expect(contactUsPage.getInTouchHeading).toBeVisible();
-  //   });
+    await test.step("Navigate to Contact Us", async () => {
+      await contactUsPage.openContactUs();
+      await expect(page).toHaveURL(URLS.CONTACT_US);
+      await expect(contactUsPage.getInTouchHeading).toBeVisible();
+    });
 
-  //   await test.step("Fill Contact Us form", async () => {
-  //     await contactUsPage.fillContactUsForm(contactDetails);
-  //   });
+    await test.step("Fill Contact Us form", async () => {
+      await contactUsPage.fillContactUsForm(contactDetails);
+    });
 
-  //   await test.step("Upload file", async () => {
-  //     await contactUsPage.uploadFile("test-data/sample.pdf");
-  //   });
+    await test.step("Upload file", async () => {
+      await contactUsPage.uploadFile("test-data/sample.pdf");
+    });
 
-  //   await test.step("Submit form and accept confirmation", async () => {
-  //     // dialog.accept() is handled by the page.on("dialog") listener above.
-  //     // A plain click() (no force) is used so Playwright's actionability
-  //     // checks catch any overlay (e.g. cookie-consent banner) blocking the
-  //     // button, instead of silently clicking through it.
-  //     await contactUsPage.submitButton.click();
-  //   });
+    await test.step("Submit form and accept confirmation", async () => {
+     
+      await contactUsPage.submitButton.click();
+    });
 
-  //   await test.step("Verify success message", async () => {
-  //     await expect(contactUsPage.successMessage).toBeVisible({ timeout: 15000 });
-  //     await expect(contactUsPage.successMessage).toContainText(
-  //       "Success! Your details have been submitted successfully."
-  //     );
-  //   });
+    await test.step("Verify success message", async () => {
+      await expect(contactUsPage.successMessage).toBeVisible({ timeout: 15000 });
+      await expect(contactUsPage.successMessage).toContainText(
+        "Success! Your details have been submitted successfully."
+      );
+    });
 
-  //   await test.step("Click Home and verify landing on home page", async () => {
-  //     // await contactUsPage.homeButton.click();
-  //     // await expect(page).toHaveURL(URLS.HOME);
-  //     // await expect(homePage.homePageLogo).toBeVisible();
-  //   });
-  // });
+    await test.step("Click Home and verify landing on home page", async () => {
+      await contactUsPage.homeButton.click();
+      await expect(page).toHaveURL(URLS.HOME);
+      await expect(homePage.homePageLogo).toBeVisible();
+    });
+  });
 
 
   test("TC007 - Verify Test Cases Page", async ({ page }) => {
