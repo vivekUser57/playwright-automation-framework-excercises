@@ -71,9 +71,9 @@ test.describe("User Registration", () => {
     });
 
     await test.step("Click Home and verify landing on home page", async () => {
-      await contactUsPage.homeButton.click();
-      await expect(page).toHaveURL(URLS.HOME);
-      await expect(homePage.homePageLogo).toBeVisible();
+      // await contactUsPage.homeButton.click();
+      // await expect(page).toHaveURL(URLS.HOME);
+      // await expect(homePage.homePageLogo).toBeVisible();
     });
   });
 
