@@ -16,7 +16,9 @@ test.describe("Products", () => {
     await expect(homePage.homePageLogo).toBeVisible();
   });
 
-  test("TC008 - Verify All Products and product detail page", async ({ page }) => {
+  test("TC008 - Verify All Products and product detail page", async ({
+    page,
+  }) => {
     await productPage.openProducts();
 
     await expect(page).toHaveURL(URLS.PRODUCTS);
@@ -36,5 +38,23 @@ test.describe("Products", () => {
     await expect(productPage.productAvailability).toBeVisible();
     await expect(productPage.productCondition).toBeVisible();
     await expect(productPage.productBrand).toBeVisible();
+  });
+
+  test("TC009 - Search Product", async ({ page }) => {
+    const searchText = "Top";
+
+    await productPage.openProducts();
+
+    await expect(page).toHaveURL(URLS.PRODUCTS);
+
+    await expect(productPage.allProductsHeading).toBeVisible();
+
+    await productPage.searchProduct(searchText);
+
+    await expect(productPage.searchedProductsHeading).toHaveText(
+      "Searched Products",
+    );
+
+    await productPage.verifyAverageSearchResult(searchText);
   });
 });

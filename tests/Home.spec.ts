@@ -8,6 +8,7 @@ import { RegisterUser } from "../types/RegisterUser";
 import { URLS } from "../config/urls";
 import { ContactUsPage } from "../pages/ContactUsPage";
 import { ContactUsFactory } from "../data-factory/contactUsFactory";
+import { CartPage } from "../pages/CartPage";
 
 test.describe("User Registration", () => {
   let homePage: HomePage;
@@ -16,6 +17,7 @@ test.describe("User Registration", () => {
   let confirmationPage: ConfirmationPage;
   let user: RegisterUser;
   let contactUsPage: ContactUsPage;
+  let cartPage: CartPage;
 
   test.beforeEach(async ({ page }) => {
     homePage = new HomePage(page);
@@ -23,6 +25,7 @@ test.describe("User Registration", () => {
     signupPage = new SignupPage(page);
     confirmationPage = new ConfirmationPage(page);
     contactUsPage = new ContactUsPage(page);
+    cartPage = new CartPage(page);
 
     // Auto-accept the native confirm() dialog that fires on Contact Us submit.
     // Registered once here so it's active for the whole test, no manual
@@ -59,7 +62,7 @@ test.describe("User Registration", () => {
     });
 
     await test.step("Submit form and accept confirmation", async () => {
-     
+
       await contactUsPage.submitButton.click();
     });
 
@@ -77,7 +80,6 @@ test.describe("User Registration", () => {
     });
   });
 
-
   test("TC007 - Verify Test Cases Page", async ({ page }) => {
     // Step 3: Verify home page is visible
     await expect(homePage.homePageLogo).toBeVisible();
@@ -91,5 +93,23 @@ test.describe("User Registration", () => {
     await expect(homePage.panel_groupText).toBeVisible();
   });
 
+  test("TC010 - Verify Subscription in home page", async ({ page }) => {
+    const email = "testuser123@gmail.com";
+    await expect(page).toHaveURL(URLS.HOME);
+    await expect(homePage.homePageLogo).toBeVisible();
+    await homePage.scrollToSubscription();
+    await expect(homePage.subscriptionText).toBeVisible();
+    await homePage.subscribe(email);
+    await expect(homePage.subscriptionSuccessMessage).toBeVisible();
+  });
 
+  test("TC011 - Verify Subscription in Cart page", async ({ page }) => {
+    const email = "testuser123@gmail.com";
+
+    await cartPage.openCart();
+    await homePage.scrollToSubscription();
+    await expect(homePage.subscriptionText).toBeVisible();
+    await homePage.subscribe(email);
+    await expect(homePage.subscriptionSuccessMessage).toBeVisible();
+  });
 });

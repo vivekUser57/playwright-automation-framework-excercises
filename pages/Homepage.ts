@@ -10,9 +10,12 @@ export class HomePage extends BasePage {
   readonly deleteAccountLink: Locator;
   readonly testCaseLink: Locator;
   readonly testCaseText: Locator;
-   readonly panel_groupText: Locator;
-
-   
+  readonly panel_groupText: Locator;
+  // Subscription
+  readonly subscriptionText: Locator;
+  readonly subscriptionEmail: Locator;
+  readonly subscriptionButton: Locator;
+  readonly subscriptionSuccessMessage: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -25,10 +28,17 @@ export class HomePage extends BasePage {
       .filter({ hasText: /Logged in as/i });
     this.logoutLink = page.getByRole("link", { name: "Logout" });
     this.deleteAccountLink = page.getByRole("link", { name: "Delete Account" });
-    this.testCaseLink = page.locator('li').filter({ hasText: 'Test Cases' })
+    this.testCaseLink = page.locator("li").filter({ hasText: "Test Cases" });
     this.testCaseText = page.locator('b:has-text("TEST CASES")');
-    this.panel_groupText = page.locator("//span[contains(text(),'Below is the list of test Cases for you to practic')]");
-
+    this.panel_groupText = page.locator(
+      "//span[contains(text(),'Below is the list of test Cases for you to practic')]",
+    );
+    this.subscriptionText = page.getByText("SUBSCRIPTION");
+    this.subscriptionEmail = page.locator("#susbscribe_email");
+    this.subscriptionButton = page.locator("#subscribe");
+    this.subscriptionSuccessMessage = page.getByText(
+      "You have been successfully subscribed!",
+    );
   }
 
   async navigate(): Promise<void> {
@@ -51,4 +61,12 @@ export class HomePage extends BasePage {
     await this.testCaseLink.click();
   }
 
+  async scrollToSubscription(): Promise<void> {
+    await this.subscriptionText.scrollIntoViewIfNeeded();
+  }
+
+  async subscribe(email: string): Promise<void> {
+    await this.subscriptionEmail.fill(email);
+    await this.subscriptionButton.click();
+  }
 }
