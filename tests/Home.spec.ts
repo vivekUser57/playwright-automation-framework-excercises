@@ -106,7 +106,7 @@ test.describe("User Registration", () => {
   test("TC011 - Verify Subscription in Cart page", async ({ page }) => {
     const email = "testuser123@gmail.com";
 
-    await cartPage.openCart();
+    await cartPage.openCartLink();
     await homePage.scrollToSubscription();
     await expect(homePage.subscriptionText).toBeVisible();
     await homePage.subscribe(email);

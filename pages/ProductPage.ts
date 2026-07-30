@@ -1,6 +1,7 @@
 import { Locator, Page } from "@playwright/test";
 import { BasePage } from "./BasePage";
 import { URLS } from "../config/urls";
+import { test, expect } from "@playwright/test";
 
 export interface ProductDetails {
   name: string | null;
@@ -11,6 +12,10 @@ export interface ProductDetails {
   brand: string | null;
 }
 
+export interface ProductCardInfo {
+  name: string | null;
+  price: string | null;
+}
 export class ProductPage extends BasePage {
   readonly allProductsHeading: Locator;
   readonly viewProductLinks: Locator;
@@ -26,6 +31,14 @@ export class ProductPage extends BasePage {
   readonly searchButton: Locator;
   readonly searchedProductsHeading: Locator;
   readonly searchedProductNames: Locator;
+  // Cart
+  readonly addToCartLinks: Locator;
+  readonly continueShoppingButton: Locator;
+  // readonly viewCartLink: Locator;
+  readonly productCards: Locator;
+  readonly quantityInput: Locator;
+  readonly addToCartButton: Locator;
+  readonly viewCartLink: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -63,6 +76,34 @@ export class ProductPage extends BasePage {
     });
 
     this.searchedProductNames = page.locator(".productinfo p");
+
+    // Cart
+    this.addToCartLinks = page.locator("a").filter({ hasText: "Add to cart" });
+    this.continueShoppingButton = page.getByRole("button", {
+      name: "Continue Shopping",
+    });
+    // this.viewCartLink = page.getByText("View Cart");
+    // Inside constructor, add:
+    this.productCards = page.locator(".product-image-wrapper");
+    this.quantityInput = page.locator("#quantity");
+
+    this.addToCartButton = page.locator(".product-information .cart");
+
+    this.viewCartLink = page.getByRole("link", {
+      name: "View Cart",
+    });
+  }
+
+  async setQuantity(quantity: number): Promise<void> {
+    await this.quantityInput.fill(quantity.toString());
+  }
+
+  async addCurrentProductToCart(): Promise<void> {
+    await this.addToCartButton.click();
+  }
+
+  async openViewCart(): Promise<void> {
+    await this.viewCartLink.click();
   }
 
   async openProducts(): Promise<void> {
@@ -155,5 +196,58 @@ export class ProductPage extends BasePage {
         `Expected at least ${expectedMatchCount} products containing "${searchText}", but found only ${matchingProducts.length}`,
       );
     }
+  }
+
+  /**
+   * Returns the 'Add to cart' locator for a given product position (1-based index)
+   * on the products listing page.
+   */
+  getAddToCartLink(productNumber: number): Locator {
+    if (productNumber < 1) {
+      throw new Error(`productNumber must be >= 1, received: ${productNumber}`);
+    }
+    return this.addToCartLinks.nth(productNumber - 1);
+  }
+
+async clickContinueShopping(): Promise<void> {
+  await this.continueShoppingButton.click();
+
+  await this.page.locator(".modal-backdrop").waitFor({
+    state: "hidden",
+    timeout: 10000,
+  });
+}
+
+  async addProductToCart(productNumber: number): Promise<void> {
+    const product = this.productCards.nth(productNumber - 1);
+    await product.waitFor({ state: "visible", timeout: 10000 });
+    await product.scrollIntoViewIfNeeded();
+    await product.hover();
+    const addButton = product.locator(".overlay-content a.add-to-cart");
+    await addButton.waitFor({ state: "visible", timeout: 10000 });
+    await addButton.waitFor({ state: "attached", timeout: 10000 });
+    await addButton.click();
+    await this.continueShoppingButton.waitFor({
+      state: "visible",
+      timeout: 10000,
+    });
+  }
+
+  /**
+   * Reads the product name and price directly from the listing page card,
+   * for a given 1-based product position — before it's added to cart.
+   */
+  async getProductCardInfo(productNumber: number): Promise<ProductCardInfo> {
+    if (productNumber < 1) {
+      throw new Error(`productNumber must be >= 1, received: ${productNumber}`);
+    }
+    const card = this.productCards.nth(productNumber - 1);
+
+    const name =
+      (await card.locator(".productinfo p").textContent())?.trim() ?? null;
+    const price =
+      (await card.locator(".productinfo h2").textContent())?.trim() ?? null;
+
+    return { name, price };
   }
 }
