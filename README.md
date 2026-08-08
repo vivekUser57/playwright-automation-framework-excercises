@@ -1,35 +1,39 @@
-<h1 align="center">🎭 Playwright Automation Framework — Exercises</h1>
+<div align="center">
 
-<p align="center">
-  A Page Object Model based UI automation framework built with <b>Playwright + TypeScript</b>,
-  testing the demo e-commerce site <a href="https://automationexercise.com/">automationexercise.com</a>.
-</p>
+# 🎭 Playwright Automation Framework
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Playwright-1.61-2EAD33?style=for-the-badge&logo=playwright&logoColor=white" />
-  <img src="https://img.shields.io/badge/TypeScript-Language-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/Node.js-Runtime-339933?style=for-the-badge&logo=node.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/Faker.js-Test%20Data-FF6F61?style=for-the-badge" />
-</p>
+**Page Object Model UI automation suite for [automationexercise.com](https://automationexercise.com/)**
+Built with Playwright + TypeScript · CI-driven with Jenkins · Reports in HTML, Allure, or JSON — your choice.
+
+[![Playwright](https://img.shields.io/badge/Playwright-1.61-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Jenkins](https://img.shields.io/badge/CI-Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white)](https://www.jenkins.io/)
+[![Allure](https://img.shields.io/badge/Reports-Allure-FF6E42?style=for-the-badge)](https://allurereport.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-LTS-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+
+</div>
 
 ---
 
-## 📌 About
+## 📌 Overview
 
-This repository is a hands-on **Playwright automation framework** covering end-to-end UI test scenarios for a live e-commerce demo site — registration, login, product browsing, cart, checkout, and the contact form. It follows the **Page Object Model (POM)** pattern for clean separation between test logic and page interactions, with typed test data and reusable factories.
+An end-to-end UI test suite covering registration, login, product browsing, cart, checkout, and the contact form on a live e-commerce demo site. Built around the **Page Object Model (POM)**, typed test data, and reusable data factories — so specs stay short and only describe *behavior*, not implementation.
+
+Every spec runs as its own **Jenkins job** (`Home-Spec-Tests`, `Login-Spec-Tests`, `Product-Spec-Tests`, `Register-Spec-Tests`) inside a `Playwright_automation_exercise` folder, with independent build history and pass/fail trends.
 
 ## 🗂️ Project Structure
 
 ```
 playwright-automation-framework-excercises/
 ├── config/
-│   └── urls.ts               # Centralized URL constants (home, login, cart, checkout...)
+│   └── urls.ts               # Centralized URL constants
 ├── data-factory/
-│   └── contactUsFactory.ts   # Generates dynamic data for the Contact Us form
+│   └── contactUsFactory.ts   # Dynamic data for the Contact Us form
 ├── models/
-│   └── GuestDetails.ts       # Type model for guest checkout details
+│   └── GuestDetails.ts       # Type model for guest checkout
 ├── pages/                    # Page Object classes (one per page)
 │   ├── BasePage.ts
+│   ├── AuthPage.ts
 │   ├── Homepage.ts
 │   ├── Loginpage.ts
 │   ├── Signuppage.ts
@@ -41,21 +45,21 @@ playwright-automation-framework-excercises/
 │   ├── Confirmationpage.ts
 │   └── ContactUsPage.ts
 ├── test-data/
-│   ├── registerData.json     # Static test user data
-│   ├── userData.ts           # Dynamic user data generated via Faker.js
-│   └── sample.pdf            # Sample file used for upload tests
+│   ├── registerData.json     # Static test user
+│   ├── userData.ts           # Dynamic user data via Faker.js
+│   └── sample.pdf            # Upload-test fixture
 ├── types/
-│   ├── RegisterUser.ts       # Type definitions for registration data
-│   └── ContactUsDetails.ts   # Type definitions for contact form data
-├── tests/                    # Test specs
+│   ├── RegisterUser.ts
+│   └── ContactUsDetails.ts
+├── tests/
 │   ├── Register.spec.ts
 │   ├── Login.spec.ts
 │   ├── Home.spec.ts
 │   ├── Product.spec.ts
 │   └── Checkout.spec.ts
-├── playwright.config.ts
+├── playwright.config.ts      # Parameterized reporter config (see below)
 ├── package.json
-└── README.md
+└── tsconfig.json
 ```
 
 ## ✅ Test Coverage
@@ -79,19 +83,17 @@ playwright-automation-framework-excercises/
 
 ## 🛠️ Tech Stack
 
-- **[Playwright](https://playwright.dev/)** `^1.61.1` — browser automation & test runner
-- **TypeScript** — static typing across pages, models, and tests
-- **[@faker-js/faker](https://fakerjs.dev/)** `^10.5.0` — realistic, randomized test data
-- **Page Object Model (POM)** — one class per page, tests stay readable and DRY
-- **HTML Reporter** — built-in Playwright HTML report after every run
+| Layer | Tool |
+|---|---|
+| Automation | [Playwright](https://playwright.dev/) `^1.61` |
+| Language | TypeScript (strict mode) |
+| Test data | [@faker-js/faker](https://fakerjs.dev/) |
+| Design pattern | Page Object Model |
+| CI | Jenkins (per-spec pipeline jobs) |
+| Reporting | Playwright HTML · Allure · JSON · JUnit — parameterized |
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (LTS recommended)
-- npm
-
-### Installation
 ```bash
 git clone https://github.com/vivekUser57/playwright-automation-framework-excercises.git
 cd playwright-automation-framework-excercises
@@ -99,46 +101,57 @@ npm install
 npx playwright install
 ```
 
-### Running Tests
+## 🧪 Running Tests
+
 ```bash
-# Run the full suite (headed, Chromium)
-npx playwright test
-
-# Run a specific spec file
+npx playwright test                 # full suite, default (html) reporter
 npx playwright test tests/Login.spec.ts
-
-# Run in UI mode (interactive)
-npx playwright test --ui
-
-# Open the HTML report after a run
-npx playwright show-report
+npm run test:ui                     # interactive UI mode
 ```
 
-## ⚙️ Configuration
+## 📊 Reporting — pick the format you need
 
-- Base test directory: `./tests`
-- Browser: Chromium (`headless: false` by default — set `headless: true` in `playwright.config.ts` for CI)
-- Tracing: enabled on first retry (`trace: 'on-first-retry'`)
-- Target site: [automationexercise.com](https://automationexercise.com/)
+Reporting is **parameterized** via the `REPORT_TYPE` environment variable — no config edits needed. Whoever's running the suite chooses HTML, Allure, JSON, or all three at once:
+
+| Command | Produces | Best for |
+|---|---|---|
+| `npm run test:html` | `playwright-report/` (interactive HTML) | Local debugging, trace viewer |
+| `npm run test:allure` | `allure-results/` (raw results) | Jenkins trend dashboards, history graphs |
+| `npm run test:json` | `test-results/results.json` | Feeding other tools / dashboards |
+| `npm run test:all-reports` | All of the above, in one run | CI runs where multiple consumers need output |
+
+A `junit.xml` is always written to `test-results/` regardless of `REPORT_TYPE`, since Jenkins reads it natively for build trend graphs without any extra plugin.
+
+**Viewing reports locally:**
+```bash
+npm run report:html      # opens the Playwright HTML report in your browser
+npm run report:allure     # generates + opens the Allure report from allure-results/
+```
+
+**Viewing/downloading from Jenkins:**
+1. Install the **Allure Jenkins Plugin** (Manage Jenkins → Plugins).
+2. Register the **Allure Commandline** tool once under Manage Jenkins → Tools.
+3. On each job (e.g. `Home-Spec-Tests`), add a post-build action **"Allure Report"** pointing at `allure-results`.
+4. After the next build, a permanent **Allure Report** link appears in that job's sidebar with history/trend charts.
+5. To download a static copy, add an **"Archive the artifacts"** step for `allure-report/**` (after `npm run report:allure:generate`), or grab the folder from **Workspace Files** on the job page.
+
+The same pattern works for the Playwright HTML report — archive `playwright-report/**` and use the **HTML Publisher** plugin if you want it viewable inline in Jenkins too.
+
+## ⚙️ Configuration Notes
+
+- Base URL: `https://automationexercise.com` (`playwright.config.ts → use.baseURL`)
+- Browser: Chromium — headless automatically on CI (`process.env.CI`), headed locally
+- Tracing: on first retry · Screenshots: on failure · Video: retained on failure
+- Retries: 2 on CI, 0 locally
 
 ## 🧩 Design Highlights
 
-- **Page Object Model** — every page has its own class with locators and actions, keeping test specs focused purely on assertions and flow.
-- **Typed test data** (`types/`) — registration and contact-form payloads are strongly typed, catching data-shape mistakes at compile time.
-- **Data factories** (`data-factory/`) — dynamic payload generation instead of hardcoded values, reducing flaky/duplicate-data failures.
+- **Page Object Model** — one class per page; specs read as plain business flows.
+- **Typed test data** (`types/`) — registration and contact-form payloads are compile-time checked.
+- **Data factories** (`data-factory/`) — dynamic payloads instead of hardcoded values, cutting down flaky/duplicate-data failures.
 - **Centralized URLs** (`config/urls.ts`) — no magic strings scattered across specs.
+- **Parameterized reporting** — one config, three report formats, chosen at run time.
 
-## 🔮 Roadmap
-
-- [ ] Add CI pipeline (GitHub Actions) to run tests on every push
-- [ ] Parameterize base URL via environment variables
-- [ ] Add cross-browser projects (Firefox, WebKit, Mobile)
-- [ ] Add Allure/JSON reporting for richer test reports
-- [ ] Increase assertions coverage on payment & guest checkout flows
-
-## 👤 Author
-
-**Vivek** — [github.com/vivekUser57](https://github.com/vivekUser57)
 
 ---
-<p align="center">⭐ If you found this useful, consider starring the repo!</p>
+<p align="center">⭐ If this framework helped you, consider starring the repo!</p>

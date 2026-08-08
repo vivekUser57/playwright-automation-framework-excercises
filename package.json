@@ -1,16 +1,38 @@
 {
   "name": "playwright_spec",
   "version": "1.0.0",
-  "description": "",
+  "description": "Page Object Model based UI automation framework for automationexercise.com built with Playwright + TypeScript.",
   "main": "index.js",
-  "scripts": {},
-  "keywords": [],
-  "author": "",
+  "scripts": {
+    "test": "playwright test",
+    "test:html": "cross-env REPORT_TYPE=html playwright test",
+    "test:allure": "cross-env REPORT_TYPE=allure playwright test",
+    "test:json": "cross-env REPORT_TYPE=json playwright test",
+    "test:all-reports": "cross-env REPORT_TYPE=all playwright test",
+    "test:ui": "playwright test --ui",
+    "report:html": "playwright show-report",
+    "report:allure:generate": "allure generate allure-results --clean -o allure-report",
+    "report:allure:open": "allure open allure-report",
+    "report:allure": "npm run report:allure:generate && npm run report:allure:open",
+    "clean": "rimraf playwright-report allure-results allure-report test-results"
+  },
+  "keywords": [
+    "playwright",
+    "typescript",
+    "automation",
+    "pom",
+    "allure"
+  ],
+  "author": "Vivek",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
     "@playwright/test": "^1.61.1",
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.2.0",
+    "allure-commandline": "^2.43.0",
+    "allure-playwright": "^3.10.2",
+    "cross-env": "^10.1.0",
+    "rimraf": "^6.1.3"
   }
 }

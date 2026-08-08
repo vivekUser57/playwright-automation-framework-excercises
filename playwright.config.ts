@@ -9,6 +9,43 @@ import { defineConfig, devices } from '@playwright/test';
 // dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 /**
+ * -----------------------------------------------------------------------
+ * Parameterized reporting.
+ *
+ * Pick a reporter (or several) without touching this file, e.g.:
+ *
+ *   REPORT_TYPE=html    npx playwright test         -> Playwright HTML report
+ *   REPORT_TYPE=allure   npx playwright test         -> Allure results (allure-results/)
+ *   REPORT_TYPE=json     npx playwright test         -> results.json
+ *   REPORT_TYPE=all       npx playwright test         -> html + allure + json together
+ *
+ * Defaults to "html" if REPORT_TYPE is not set (e.g. local `npx playwright test`).
+ * See npm scripts in package.json for shortcuts (npm run test:allure, etc.)
+ * -----------------------------------------------------------------------
+ */
+type ReportType = 'html' | 'allure' | 'json' | 'all';
+
+const REPORT_TYPE = (process.env.REPORT_TYPE as ReportType) || 'html';
+
+const reporters: any[] = [['list']];
+
+if (REPORT_TYPE === 'html' || REPORT_TYPE === 'all') {
+  reporters.push(['html', { open: 'never', outputFolder: 'playwright-report' }]);
+}
+
+if (REPORT_TYPE === 'allure' || REPORT_TYPE === 'all') {
+  reporters.push(['allure-playwright', { resultsDir: 'allure-results' }]);
+}
+
+if (REPORT_TYPE === 'json' || REPORT_TYPE === 'all') {
+  reporters.push(['json', { outputFile: 'test-results/results.json' }]);
+}
+
+// Always emit a JUnit file too — Jenkins reads this natively for pass/fail trend graphs
+// on every job regardless of which "human" report was requested.
+reporters.push(['junit', { outputFile: 'test-results/junit.xml' }]);
+
+/**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
@@ -27,10 +64,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [
-    ['html', { open: 'never' }],
-    ['list'],
-  ],
+  reporter: reporters,
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
@@ -62,7 +96,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        headless: false,
+        headless: !!process.env.CI,
       },
     },
 
