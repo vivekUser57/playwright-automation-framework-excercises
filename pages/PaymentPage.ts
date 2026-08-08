@@ -15,8 +15,8 @@ export class PaymentPage extends BasePage {
   readonly cvcInput: Locator;
   readonly expiryMonthInput: Locator;
   readonly expiryYearInput: Locator;
-  readonly payButton: Locator;
-  readonly successMessage: Locator;
+  readonly payAndConfirmButton: Locator;
+  readonly orderSuccessMessage: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -25,8 +25,8 @@ export class PaymentPage extends BasePage {
     this.cvcInput = page.locator('input[name="cvc"]');
     this.expiryMonthInput = page.locator('input[name="expiry_month"]');
     this.expiryYearInput = page.locator('input[name="expiry_year"]');
-    this.payButton = page.getByText("Pay and Confirm Order");
-    this.successMessage = page.locator(".alert-success");
+    this.payAndConfirmButton = page.getByRole("button", { name: "Pay and Confirm Order" });
+    this.orderSuccessMessage = page.locator("#success_message");
   }
 
   async fillPaymentDetails(details: PaymentDetails): Promise<void> {
@@ -38,6 +38,6 @@ export class PaymentPage extends BasePage {
   }
 
   async payAndConfirmOrder(): Promise<void> {
-    await this.payButton.click();
+    await this.payAndConfirmButton.click();
   }
 }

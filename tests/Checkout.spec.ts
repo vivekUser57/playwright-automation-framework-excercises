@@ -1,41 +1,28 @@
 import { test, expect } from "@playwright/test";
+import { faker } from "@faker-js/faker";
 import { HomePage } from "../pages/Homepage";
-import { LoginPage } from "../pages/Loginpage";
-import { SignupPage } from "../pages/Signuppage";
-import { ConfirmationPage } from "../pages/Confirmationpage";
 import { ProductPage } from "../pages/ProductPage";
 import { CartPage } from "../pages/CartPage";
+import { AuthPage } from "../pages/AuthPage";
 import { CheckoutPage } from "../pages/CheckoutPage";
 import { PaymentPage } from "../pages/PaymentPage";
-import registerData from "../test-data/registerData.json";
-import { RegisterUser } from "../types/RegisterUser";
 import { URLS } from "../config/urls";
 
 test.describe("Checkout", () => {
   let homePage: HomePage;
-  let loginPage: LoginPage;
-  let signupPage: SignupPage;
-  let confirmationPage: ConfirmationPage;
   let productPage: ProductPage;
   let cartPage: CartPage;
+  let authPage: AuthPage;
   let checkoutPage: CheckoutPage;
   let paymentPage: PaymentPage;
-  let user: RegisterUser;
 
   test.beforeEach(async ({ page }) => {
     homePage = new HomePage(page);
-    loginPage = new LoginPage(page);
-    signupPage = new SignupPage(page);
-    confirmationPage = new ConfirmationPage(page);
     productPage = new ProductPage(page);
     cartPage = new CartPage(page);
+    authPage = new AuthPage(page);
     checkoutPage = new CheckoutPage(page);
     paymentPage = new PaymentPage(page);
-
-    user = {
-      ...registerData,
-      email: `vivek${Date.now()}${Math.floor(Math.random() * 1000)}@test.com`,
-    } as RegisterUser;
 
     await homePage.navigate();
     await expect(page).toHaveURL(URLS.HOME);
@@ -43,75 +30,104 @@ test.describe("Checkout", () => {
   });
 
   test("TC014 - Place Order: Register while Checkout", async ({ page }) => {
-    // Step 4: Add products to cart
-    await productPage.openProducts();
-    await expect(page).toHaveURL(URLS.PRODUCTS);
-    await expect(productPage.allProductsHeading).toBeVisible();
-    await productPage.addProductToCart(1);
-    await productPage.clickContinueShopping();
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const fullName = `${firstName} ${lastName}`;
+    const email = `qa.${faker.string.uuid()}@example.com`;
 
-    // Step 5-6: Click 'Cart' and verify cart page
-    await cartPage.openCartLink();
-    await expect(page).toHaveURL(URLS.VIEW_CART);
+    let accountCreated = false;
 
-    // Step 7: Click 'Proceed To Checkout'
-    await cartPage.proceedToCheckout();
+    try {
+      await test.step("Add product to cart", async () => {
+        await productPage.openProducts();
+        await expect(page).toHaveURL(URLS.PRODUCTS);
+        await productPage.addProductToCart(1);
+        await productPage.clickContinueShopping();
+      });
 
-    // Step 8: Click 'Register / Login' button (checkout redirects unauthenticated users to login)
-    await homePage.openLoginPage();
-    await expect(page).toHaveURL(URLS.LOGIN);
-    await expect(loginPage.newUserSignupHeading).toBeVisible();
+      await test.step("Go to cart and verify cart page", async () => {
+        await cartPage.openCart();
+        await expect(page).toHaveURL(URLS.VIEW_CART);
+      });
 
-    // Step 9: Fill all details in Signup and create account
-    await loginPage.startSignup(user.name, user.email);
-    await signupPage.verifyPrefilledInformation(user);
-    await signupPage.fillAccountInformation(user);
+      await test.step("Proceed to checkout and click Register/Login", async () => {
+        await cartPage.proceedToCheckout();
+        await cartPage.clickRegisterLogin();
+        await expect(page).toHaveURL(/.*\/login/);
+      });
 
-    // Step 10: Verify 'ACCOUNT CREATED!' and click 'Continue'
-    await expect(confirmationPage.accountCreatedMessage).toBeVisible();
-    await expect(confirmationPage.accountCreatedMessage).toHaveText(
-      /account created!/i,
-    );
-    await confirmationPage.continue();
+      await test.step("Fill signup form and create account", async () => {
+        await authPage.signup(fullName, email);
 
-    // Step 11: Verify 'Logged in as username' at top
-    await expect(homePage.loggedInUserLabel).toBeVisible();
-    await expect(homePage.loggedInUserLabel).toContainText(user.name);
+        await authPage.fillAccountInformation({
+          password: faker.internet.password({ length: 12 }),
+          day: String(faker.number.int({ min: 1, max: 28 })),
+          month: String(faker.number.int({ min: 1, max: 12 })),
+          year: String(faker.number.int({ min: 1970, max: 2005 })),
+          firstName,
+          lastName,
+          address: faker.location.streetAddress(),
+          country: "United States",
+          state: faker.location.state(),
+          city: faker.location.city(),
+          zipcode: faker.location.zipCode(),
+          mobileNumber: faker.phone.number(),
+        });
 
-    // Step 12-13: Click 'Cart' then 'Proceed To Checkout' again
-    await cartPage.openCartLink();
-await expect(page).toHaveURL(URLS.VIEW_CART);
-    await cartPage.proceedToCheckout();
+        await authPage.submitAccountCreation();
+      });
 
-    // Step 14: Verify Address Details and Review Your Order
-    await checkoutPage.verifyAddressAndOrderVisible();
+      await test.step("Verify 'ACCOUNT CREATED!' and click Continue", async () => {
+        await expect(authPage.accountCreatedText).toBeVisible();
+        accountCreated = true;
+        await authPage.clickContinue();
+      });
 
-    // Step 15: Enter comment and click 'Place Order'
-    await checkoutPage.enterComment("Please deliver between 9 AM - 6 PM.");
-    await checkoutPage.placeOrder();
+      await test.step("Verify 'Logged in as' username at top", async () => {
+        await expect(homePage.loggedInAsText).toContainText(fullName);
+      });
 
-    // Step 16-17: Enter payment details and confirm
-    await paymentPage.fillPaymentDetails({
-      nameOnCard: user.name,
-      cardNumber: "4111111111111111",
-      cvc: "123",
-      expiryMonth: "12",
-      expiryYear: "2030",
-    });
-    await paymentPage.payAndConfirmOrder();
+      await test.step("Go back to cart and proceed to checkout", async () => {
+        await cartPage.openCart();
+        await expect(page).toHaveURL(URLS.VIEW_CART);
+        await cartPage.proceedToCheckout();
+        await expect(page).toHaveURL(URLS.CHECKOUT);
+      });
 
-    // Step 18: Verify success message
-    await expect(paymentPage.successMessage).toBeVisible();
-    await expect(paymentPage.successMessage).toContainText(
-      "Your order has been placed successfully!",
-    );
+      await test.step("Verify address details and order review", async () => {
+        await checkoutPage.verifyAddressAndOrderVisible();
+      });
 
-    // Step 19-20: Delete account and verify
-    await homePage.deleteAccount();
-    await expect(confirmationPage.accountDeletedMessage).toBeVisible();
-    await expect(confirmationPage.accountDeletedMessage).toHaveText(
-      /account deleted!/i,
-    );
-    await confirmationPage.continue();
+      await test.step("Enter comment and place order", async () => {
+        await checkoutPage.enterComment(faker.lorem.sentence());
+        await checkoutPage.placeOrder();
+        await expect(page).toHaveURL(URLS.PAYMENT);
+      });
+
+      await test.step("Enter payment details and confirm order", async () => {
+        await paymentPage.fillPaymentDetails({
+          nameOnCard: fullName,
+          cardNumber: "4111111111111111",
+          cvc: String(faker.number.int({ min: 100, max: 999 })),
+          expiryMonth: "12",
+          expiryYear: "2028",
+        });
+        await paymentPage.payAndConfirmOrder();
+      });
+
+      await test.step("Verify order success message", async () => {
+        await expect(paymentPage.orderSuccessMessage).toContainText(
+          "Your order has been placed successfully!",
+        );
+      });
+    } finally {
+      if (accountCreated) {
+        await test.step("Cleanup: delete test account", async () => {
+          await homePage.deleteAccountLink.click();
+          await expect(authPage.accountDeletedText).toBeVisible();
+          await authPage.clickContinue();
+        });
+      }
+    }
   });
 });

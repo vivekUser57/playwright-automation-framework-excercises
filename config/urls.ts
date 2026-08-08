@@ -7,5 +7,7 @@ export const URLS = {
     TEST_CASES: 'https://automationexercise.com/test_cases',
     PRODUCT_DETAILS: 'https://automationexercise.com/product_details',
     VIEW_CART: "https://automationexercise.com/view_cart",
+    CHECKOUT: "https://automationexercise.com/checkout",
+    PAYMENT: "https://automationexercise.com/payment",
 
 } as const;

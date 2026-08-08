@@ -16,6 +16,7 @@ export class HomePage extends BasePage {
   readonly subscriptionEmail: Locator;
   readonly subscriptionButton: Locator;
   readonly subscriptionSuccessMessage: Locator;
+  readonly loggedInAsText: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -39,6 +40,7 @@ export class HomePage extends BasePage {
     this.subscriptionSuccessMessage = page.getByText(
       "You have been successfully subscribed!",
     );
+    this.loggedInAsText = page.getByText("Logged in as");
   }
 
   async navigate(): Promise<void> {

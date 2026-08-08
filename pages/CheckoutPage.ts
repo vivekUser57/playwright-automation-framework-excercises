@@ -9,10 +9,10 @@ export class CheckoutPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.addressDetailsHeading = page.getByText("Address Details");
-    this.reviewOrderHeading = page.getByText("Review Your Order");
+    this.addressDetailsHeading = page.getByRole("heading", { name: "Address Details" });
+    this.reviewOrderHeading = page.getByRole("heading", { name: "Review Your Order" });
     this.commentTextArea = page.locator('textarea[name="message"]');
-    this.placeOrderButton = page.getByText("Place Order");
+    this.placeOrderButton = page.getByRole("link", { name: "Place Order" });
   }
 
   async verifyAddressAndOrderVisible(): Promise<void> {
