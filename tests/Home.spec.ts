@@ -14,7 +14,7 @@ test.describe("Home / Contact Us / Subscription", () => {
     await expect(homePage.homePageLogo).toBeVisible();
   });
 
-  test("TC006 - Contact Us Form", async ({ page, homePage, contactUsPage }) => {
+  test("@regression TC006 - Contact Us Form", async ({ page, homePage, contactUsPage }) => {
     // File upload here is only reliable on CI/Jenkins; skip locally to keep
     // `npm test` green. Set CI=1 in your shell to force-run it locally.
     test.skip(!process.env.CI, "TC006 file upload only stable on CI/Jenkins");
@@ -53,13 +53,13 @@ test.describe("Home / Contact Us / Subscription", () => {
     });
   });
 
-  test("TC007 - Verify Test Cases Page", async ({ page, homePage }) => {
+  test("@regression TC007 - Verify Test Cases Page", async ({ page, homePage }) => {
     await homePage.openTestCase();
     await expect(page).toHaveURL(URLS.TEST_CASES);
     await expect(homePage.testCaseText).toBeVisible();
   });
 
-  test("TC010 - Verify Subscription on Home page", async ({ homePage }) => {
+  test("@regression TC010 - Verify Subscription on Home page", async ({ homePage }) => {
     // Unique email per run so the site never rejects for duplicates.
     const email = `subscriber+${Date.now()}@test.com`;
 
@@ -67,7 +67,7 @@ test.describe("Home / Contact Us / Subscription", () => {
     await homePage.subscribeAndVerify(email);
   });
 
-  test("TC011 - Verify Subscription on Cart page", async ({ page, cartPage }) => {
+  test("@regression TC011 - Verify Subscription on Cart page", async ({ page, cartPage }) => {
     const email = `subscriber+${Date.now()}@test.com`;
 
     await cartPage.openCart();
@@ -78,7 +78,7 @@ test.describe("Home / Contact Us / Subscription", () => {
     await cartPage.subscribeAndVerify(email);
   });
 
-  test("TC025 - Verify Scroll Up using 'Arrow' button", async ({ homePage }) => {
+  test("@regression TC025 - Verify Scroll Up using 'Arrow' button", async ({ homePage }) => {
     await homePage.scrollToBottom();
     await expect(homePage.subscriptionHeading).toBeVisible();
     // The arrow only appears once the user has scrolled down.
@@ -88,7 +88,7 @@ test.describe("Home / Contact Us / Subscription", () => {
     await expect(homePage.homePageLogo).toBeInViewport();
   });
 
-  test("TC026 - Verify Scroll Up without 'Arrow' button", async ({ homePage }) => {
+  test("@regression TC026 - Verify Scroll Up without 'Arrow' button", async ({ homePage }) => {
     await homePage.scrollToBottom();
     await expect(homePage.subscriptionHeading).toBeVisible();
     // Scroll back to top programmatically (i.e. WITHOUT using the arrow).

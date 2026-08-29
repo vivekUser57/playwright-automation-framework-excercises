@@ -103,15 +103,6 @@ export default defineConfig({
       },
     },
 
-  projects: [
-    {
-      name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-      },
-    },
-  ],
-
     /* Test against branded browsers. */
     // {
     //   name: 'Microsoft Edge',

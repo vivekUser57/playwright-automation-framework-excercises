@@ -13,7 +13,7 @@ test.describe("User Registration", () => {
     await expect(homePage.homePageLogo).toBeVisible();
   });
 
-  test("TC001 - Register User", async ({
+  test("@regression TC001 - Register User", async ({
     page,
     homePage,
     loginPage,
@@ -55,7 +55,7 @@ test.describe("User Registration", () => {
     });
   });
 
-  test("TC005 - Register User with existing email", async ({
+  test("@regression TC005 - Register User with existing email", async ({
     page,
     homePage,
     loginPage,

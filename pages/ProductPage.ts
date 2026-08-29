@@ -233,7 +233,21 @@ export class ProductPage extends BasePage {
       throw new Error(`productNumber must be >= 1, received: ${productNumber}`);
     }
     const card = this.productCards.nth(productNumber - 1);
-    const name = (await card.locator(".productinfo p").textContent())?.trim() ?? null;
+    
+    // Get only the direct text of the <p> tag, excluding child elements' text
+    const nameHandle = await card.locator(".productinfo p").elementHandle();
+    let name: string | null = null;
+    if (nameHandle) {
+      name = (await nameHandle.evaluate((el) => {
+        // Get only direct text nodes, not nested element text
+        return Array.from(el.childNodes)
+          .filter((node) => node.nodeType === 3) // TEXT_NODE
+          .map((node) => node.textContent?.trim())
+          .filter((text) => text)
+          .join(" ");
+      })).trim() || null;
+    }
+    
     const price = (await card.locator(".productinfo h2").textContent())?.trim() ?? null;
     return { name, price };
   }
@@ -287,11 +301,18 @@ export class ProductPage extends BasePage {
    * each product is present in the cart.
    */
   async addAllSearchedProductsToCart(): Promise<string[]> {
+    // Wait for at least one product card to be visible, ensuring search results are loaded
+    await this.productCards.first().waitFor({ state: 'visible', timeout: 10000 });
+    
     const total = await this.productCards.count();
     if (total === 0) throw new Error("No products to add — search returned empty.");
 
     const names: string[] = [];
     for (let i = 1; i <= total; i++) {
+      // Ensure the card is visible before capturing its info
+      await this.productCards.nth(i - 1).scrollIntoViewIfNeeded();
+      await this.productCards.nth(i - 1).waitFor({ state: 'visible', timeout: 5000 });
+      
       const info = await this.getProductCardInfo(i);
       if (info.name) names.push(info.name);
       await this.addProductToCart(i);

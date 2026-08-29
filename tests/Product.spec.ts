@@ -14,7 +14,7 @@ test.describe("Products & Cart", () => {
     await expect(homePage.homePageLogo).toBeVisible();
   });
 
-  test("TC008 - Verify All Products and product detail page", async ({
+  test("@regression TC008 - Verify All Products and product detail page", async ({
     page,
     productPage,
   }) => {
@@ -36,7 +36,7 @@ test.describe("Products & Cart", () => {
     expect(details.brand, "Brand should be non-empty").toBeTruthy();
   });
 
-  test("TC009 - Search Product", async ({ page, productPage }) => {
+  test("@regression TC009 - Search Product", async ({ page, productPage }) => {
     const searchText = "Top";
 
     await productPage.openProducts();
@@ -55,7 +55,7 @@ test.describe("Products & Cart", () => {
     await productPage.verifyAverageSearchResult(searchText);
   });
 
-  test("TC012 - Add Products in Cart", async ({ page, productPage, cartPage }) => {
+  test("@regression TC012 - Add Products in Cart", async ({ page, productPage, cartPage }) => {
     await productPage.openProducts();
     await expect(page).toHaveURL(URLS.PRODUCTS);
     await expect(productPage.allProductsHeading).toBeVisible();
@@ -91,7 +91,7 @@ test.describe("Products & Cart", () => {
     expect(row2.total).toBe(p2Price);
   });
 
-  test("TC013 - Verify Product quantity in Cart", async ({
+  test("@regression TC013 - Verify Product quantity in Cart", async ({
     page,
     productPage,
     cartPage,
@@ -115,7 +115,7 @@ test.describe("Products & Cart", () => {
     expect(row.quantity).toBe(String(desiredQuantity));
   });
 
-  test("TC017 - Remove Products From Cart", async ({ page, productPage, cartPage }) => {
+  test("@regression TC017 - Remove Products From Cart", async ({ page, productPage, cartPage }) => {
     await productPage.openProducts();
     await expect(page).toHaveURL(URLS.PRODUCTS);
 
@@ -134,7 +134,7 @@ test.describe("Products & Cart", () => {
     await expect(cartPage.emptyCartMessage).toBeVisible();
   });
 
-  test("TC018 - View Category Products", async ({ page, productPage }) => {
+  test("@regression TC018 - View Category Products", async ({ page, productPage }) => {
     await productPage.openProducts();
     await expect(productPage.categoriesHeading).toBeVisible();
 
@@ -147,7 +147,7 @@ test.describe("Products & Cart", () => {
     await expect(productPage.categoryPageHeading).toContainText(/MEN\s*-\s*TSHIRTS/i);
   });
 
-  test("TC019 - View & Cart Brand Products", async ({ page, productPage }) => {
+  test("@regression TC019 - View & Cart Brand Products", async ({ page, productPage }) => {
     await productPage.openProducts();
     await expect(productPage.brandsHeading).toBeVisible();
 
@@ -160,7 +160,7 @@ test.describe("Products & Cart", () => {
     await expect(productPage.categoryPageHeading).toContainText(/MADAME/i);
   });
 
-  test("TC020 - Search Products and Verify Cart After Login", async ({
+  test("@regression TC020 - Search Products and Verify Cart After Login", async ({
     page,
     homePage,
     loginPage,
@@ -182,8 +182,7 @@ test.describe("Products & Cart", () => {
         await expect(homePage.loggedInUserLabel).toContainText(registerUser.name);
       });
 
-      await test.step("Logout, search, and add every result to the cart", async () => {
-        await homePage.logout();
+      await test.step("Search and add products to the cart while logged in", async () => {
         await productPage.openProducts();
         await productPage.searchProduct("Top");
         await expect(productPage.searchedProductsHeading).toBeVisible();
@@ -198,10 +197,13 @@ test.describe("Products & Cart", () => {
         (test.info() as { attach?: unknown } & Record<string, unknown>).addedNames = addedNames;
       });
 
-      await test.step("Log back in and verify the cart still contains the added items", async () => {
+      await test.step("Logout and log back in to verify the cart still contains the added items", async () => {
+        await homePage.logout();
+        
         await homePage.openLoginPage();
         await loginPage.login(registerUser.email, registerUser.password);
         await expect(homePage.loggedInUserLabel).toContainText(registerUser.name);
+        
         await cartPage.openCart();
         await expect(page).toHaveURL(URLS.VIEW_CART);
 
@@ -221,7 +223,7 @@ test.describe("Products & Cart", () => {
     }
   });
 
-  test("TC021 - Add review on product", async ({ page, productPage }) => {
+  test("@regression TC021 - Add review on product", async ({ page, productPage }) => {
     await productPage.openProducts();
     await expect(page).toHaveURL(URLS.PRODUCTS);
 
@@ -238,7 +240,7 @@ test.describe("Products & Cart", () => {
     await expect(productPage.reviewSuccessMessage).toBeVisible();
   });
 
-  test("TC022 - Add to cart from Recommended items", async ({
+  test("@regression TC022 - Add to cart from Recommended items", async ({
     page,
     homePage,
     productPage,

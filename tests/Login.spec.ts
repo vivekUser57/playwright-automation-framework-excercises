@@ -13,7 +13,7 @@ test.describe("User Login", () => {
     await expect(homePage.homePageLogo).toBeVisible();
   });
 
-  test("TC002 - Login User with correct email and password", async ({
+  test("@regression TC002 - Login User with correct email and password", async ({
     page,
     homePage,
     loginPage,
@@ -49,7 +49,7 @@ test.describe("User Login", () => {
     });
   });
 
-  test("TC003 - Login User with incorrect email and password", async ({
+  test("@regression TC003 - Login User with incorrect email and password", async ({
     page,
     homePage,
     loginPage,
@@ -68,7 +68,7 @@ test.describe("User Login", () => {
     await expect(page).toHaveURL(URLS.LOGIN);
   });
 
-  test("TC004 - Logout User", async ({
+  test("@regression TC004 - Logout User", async ({
     page,
     homePage,
     loginPage,

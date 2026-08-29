@@ -14,7 +14,7 @@ test.describe("Checkout", () => {
     await expect(homePage.homePageLogo).toBeVisible();
   });
 
-  test("TC014 - Place Order: Register while Checkout", async ({
+  test("@regression TC014 - Place Order: Register while Checkout", async ({
     page,
     homePage,
     productPage,
@@ -127,7 +127,7 @@ test.describe("Checkout", () => {
     }
   });
 
-  test("TC015 - Place Order: Register before Checkout", async ({
+  test("@regression TC015 - Place Order: Register before Checkout", async ({
     page,
     homePage,
     loginPage,
@@ -187,7 +187,7 @@ test.describe("Checkout", () => {
     }
   });
 
-  test("TC016 - Place Order: Login before Checkout", async ({
+  test("@regression TC016 - Place Order: Login before Checkout", async ({
     page,
     homePage,
     loginPage,
@@ -250,7 +250,7 @@ test.describe("Checkout", () => {
     }
   });
 
-  test("TC023 - Verify address details in checkout page", async ({
+  test("@regression TC023 - Verify address details in checkout page", async ({
     page,
     homePage,
     loginPage,
@@ -307,7 +307,7 @@ test.describe("Checkout", () => {
     }
   });
 
-  test("TC024 - Download Invoice after purchase order", async ({
+  test("@regression TC024 - Download Invoice after purchase order", async ({
     page,
     homePage,
     loginPage,

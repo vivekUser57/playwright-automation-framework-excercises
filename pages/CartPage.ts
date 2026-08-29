@@ -81,7 +81,10 @@ export class CartPage extends BasePage {
   }
 
   getRowByProductName(productName: string): Locator {
-    return this.cartRows.filter({ hasText: productName });
+    // Use regex with flexible whitespace matching to handle formatting differences
+    // Normalize multiple spaces to flexible regex pattern and make case-insensitive
+    const pattern = productName.trim().replace(/\s+/g, '\\s+');
+    return this.cartRows.filter({ hasText: new RegExp(pattern, 'i') });
   }
 
   async getCartRowDetails(productName: string): Promise<CartRow> {
