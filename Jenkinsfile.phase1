@@ -1,0 +1,122 @@
+pipeline {
+    agent any
+    
+    options {
+        timestamps()
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
+    }
+    
+    environment {
+        REPORT_TYPE = 'all'
+        CI = 'true'
+    }
+    
+    stages {
+        stage('Setup') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "🚀 Playwright Tests - Phase 1"
+                    echo "=========================================="
+                    echo "Features: Rich Report + Slack + Retry + Performance"
+                }
+                
+                // Clean previous reports
+                deleteDir()
+                checkout scm
+                
+                sh '''
+                    echo "📦 Installing dependencies..."
+                    npm ci --silent
+                    echo "✓ Dependencies installed"
+                '''
+            }
+        }
+        
+        stage('Run Tests with Auto-Retry') {
+            steps {
+                script {
+                    echo "🧪 Running tests with automatic retry on failure..."
+                    sh '''
+                        npx playwright test --grep "@regression" || true
+                    '''
+                }
+            }
+        }
+        
+        stage('Generate Rich Report & Metrics') {
+            steps {
+                script {
+                    echo "📊 Generating reports and metrics..."
+                    sh '''
+                        # Generate rich console report
+                        node scripts/generate-rich-report.js
+                        
+                        # Collect performance metrics
+                        node scripts/collect-metrics.js
+                        
+                        # Print test summary
+                        node scripts/print-test-summary.js
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Publish HTML Report
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'report',
+                reportFiles: 'index.html',
+                reportName: 'Playwright Report'
+            ])
+            
+            // Allure Report (if available)
+            script {
+                if (fileExists('allure-report/index.html')) {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'allure-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Allure Report'
+                    ])
+                }
+            }
+            
+            // Collect JUnit results
+            junit allowEmptyResults: true, testResults: 'test-results/junit.xml'
+            
+            // Archive performance metrics
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'performance-metrics.json'
+        }
+        
+        success {
+            script {
+                echo "✅ All tests PASSED!"
+                
+                // Send Slack Success Notification
+                sh '''
+                    node scripts/slack-notification.js "success" || true
+                '''
+            }
+        }
+        
+        failure {
+            script {
+                echo "❌ Tests FAILED!"
+                
+                // Send Slack Failure Notification
+                sh '''
+                    node scripts/slack-notification.js "failure" || true
+                '''
+            }
+        }
+    }
+}

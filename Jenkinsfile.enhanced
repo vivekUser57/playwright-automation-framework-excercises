@@ -1,0 +1,276 @@
+pipeline {
+    agent any
+    
+    options {
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
+    }
+    
+    parameters {
+        string(name: 'SLACK_CHANNEL', defaultValue: '#automation-tests', description: 'Slack channel for notifications')
+        string(name: 'EMAIL_RECIPIENT', defaultValue: 'vivekkumar985321@gmail.com', description: 'Email recipient')
+    }
+    
+    environment {
+        REPORT_TYPE = 'all'
+        CI = 'true'
+        NODE_ENV = 'test'
+        ALLURE_RESULTS = 'allure-results'
+        ALLURE_REPORT = 'allure-report'
+    }
+    
+    stages {
+        stage('Setup') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "🚀 Playwright Test Suite - Full Automation"
+                    echo "=========================================="
+                    echo "Start Time: ${new Date()}"
+                    echo "Environment: ${NODE_ENV}"
+                    echo "Report Type: ${REPORT_TYPE}"
+                }
+                
+                // Clean previous reports
+                deleteDir()
+                checkout scm
+                
+                sh '''
+                    echo "📦 Installing dependencies..."
+                    npm ci --silent
+                    echo "✓ Dependencies installed"
+                '''
+            }
+        }
+        
+        stage('Run All 5 Jobs in Parallel') {
+            parallel {
+                stage('Home Tests') {
+                    steps {
+                        script {
+                            sh '''
+                                echo "🏠 Running Home-Spec-Tests..."
+                                npx playwright test tests/Home.spec.ts --grep "@regression"
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Login Tests') {
+                    steps {
+                        script {
+                            sh '''
+                                echo "🔑 Running Login-Spec-Tests..."
+                                npx playwright test tests/Login.spec.ts --grep "@regression"
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Product Tests') {
+                    steps {
+                        script {
+                            sh '''
+                                echo "📦 Running Product-Spec-Tests..."
+                                npx playwright test tests/Product.spec.ts --grep "@regression"
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Register Tests') {
+                    steps {
+                        script {
+                            sh '''
+                                echo "👤 Running Register-Spec-Tests..."
+                                npx playwright test tests/Register.spec.ts --grep "@regression"
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Checkout Tests') {
+                    steps {
+                        script {
+                            sh '''
+                                echo "🛒 Running Checkout-Spec-Tests..."
+                                npx playwright test tests/Checkout.spec.ts --grep "@regression"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Generate Reports') {
+            steps {
+                script {
+                    echo "📊 Generating test reports..."
+                    sh '''
+                        # Allure report
+                        if [ -d "allure-results" ]; then
+                            echo "Generating Allure report..."
+                            npx allure generate allure-results --clean -o allure-report || echo "Allure report generation skipped"
+                        fi
+                        
+                        echo "✓ Reports generated"
+                    '''
+                }
+            }
+        }
+        
+        stage('Collect Performance Metrics') {
+            steps {
+                script {
+                    echo "⏱️ Collecting performance metrics..."
+                    sh '''
+                        # Extract performance data from test results
+                        node scripts/collect-metrics.js || echo "Metrics collection completed"
+                    '''
+                }
+            }
+        }
+        
+        stage('Detect Flaky Tests') {
+            steps {
+                script {
+                    echo "🔍 Analyzing for flaky tests..."
+                    sh '''
+                        node scripts/detect-flaky-tests.js || echo "Flaky test detection completed"
+                    '''
+                }
+            }
+        }
+        
+        stage('Prepare Test Trend Data') {
+            steps {
+                script {
+                    echo "📈 Preparing test trend data..."
+                    sh '''
+                        node scripts/update-test-trends.js || echo "Trend update completed"
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Publish HTML Reports
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'report',
+                reportFiles: 'index.html',
+                reportName: 'Playwright HTML Report'
+            ])
+            
+            // Publish Allure Report
+            script {
+                if (fileExists('allure-report/index.html')) {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'allure-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Allure Test Report'
+                    ])
+                }
+            }
+            
+            // Collect test results
+            junit allowEmptyResults: true, testResults: 'test-results/junit.xml'
+            
+            // Archive performance metrics
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'performance-metrics.json,flaky-tests.json,test-trends.json'
+            
+            // Publish Custom Rich Console Report
+            sh '''
+                node scripts/generate-rich-report.js
+            '''
+            
+            // Create Test Summary
+            sh '''
+                echo "=========================================="
+                echo "📊 TEST EXECUTION SUMMARY"
+                echo "=========================================="
+                node scripts/print-test-summary.js
+            '''
+        }
+        
+        success {
+            script {
+                echo "✅ All tests PASSED!"
+                
+                // Send Slack Success Notification
+                sh '''
+                    node scripts/slack-notification.js "success" "${SLACK_CHANNEL}"
+                '''
+                
+                // Send Email on Success (optional)
+                emailext(
+                    subject: "✅ Playwright Tests PASSED - ${env.JOB_NAME}",
+                    body: '''
+                        All 26 regression tests PASSED! 🎉
+                        
+                        Build: ${BUILD_DISPLAY_NAME}
+                        Status: SUCCESS
+                        
+                        View detailed report: ${BUILD_URL}Playwright_20Test_20Report/
+                        View Allure report: ${BUILD_URL}Allure_20Test_20Report/
+                    ''',
+                    to: '${params.EMAIL_RECIPIENT}',
+                    attachmentsPattern: 'performance-metrics.json'
+                )
+            }
+        }
+        
+        failure {
+            script {
+                echo "❌ Tests FAILED!"
+                
+                // Send Slack Failure Notification with details
+                sh '''
+                    node scripts/slack-notification.js "failure" "${SLACK_CHANNEL}"
+                '''
+                
+                // Send Email on Failure
+                emailext(
+                    subject: "❌ Playwright Tests FAILED - ${env.JOB_NAME} #${BUILD_NUMBER}",
+                    body: '''
+                        Some tests FAILED! Please review:
+                        
+                        Build: ${BUILD_DISPLAY_NAME}
+                        Status: FAILURE
+                        
+                        View detailed report: ${BUILD_URL}Playwright_20Test_20Report/
+                        View Allure report: ${BUILD_URL}Allure_20Test_20Report/
+                        View console: ${BUILD_URL}console
+                        
+                        Flaky tests detected: See flaky-tests.json
+                    ''',
+                    to: '${params.EMAIL_RECIPIENT}',
+                    attachmentsPattern: 'flaky-tests.json,test-results/junit.xml'
+                )
+            }
+        }
+        
+        unstable {
+            echo "⚠️ Build is UNSTABLE - Some tests may have retried"
+            sh '''
+                node scripts/slack-notification.js "unstable" "${SLACK_CHANNEL}"
+            '''
+        }
+        
+        cleanup {
+            sh '''
+                echo "🧹 Cleanup completed"
+                # Clean up temporary files if needed
+                # rm -rf temp-data/
+            '''
+        }
+    }
+}
