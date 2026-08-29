@@ -30,7 +30,10 @@ const REPORT_TYPE = (process.env.REPORT_TYPE as ReportType) || 'html';
 const reporters: any[] = [['list']];
 
 if (REPORT_TYPE === 'html' || REPORT_TYPE === 'all') {
-  reporters.push(['html', { open: 'never', outputFolder: 'playwright-report' }]);
+  // outputFolder is wiped by `pretest` in package.json, so each run overwrites the previous report.
+  // open: 'on-failure' auto-opens the HTML report in the browser only when tests fail
+  //   (successful runs stay quiet). Pass/fail details are always included either way.
+  reporters.push(['html', { open: 'on-failure', outputFolder: 'report' }]);
 }
 
 if (REPORT_TYPE === 'allure' || REPORT_TYPE === 'all') {

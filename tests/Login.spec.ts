@@ -1,30 +1,13 @@
-import { test, expect } from "@playwright/test";
-import { HomePage } from "../pages/Homepage";
-import { LoginPage } from "../pages/Loginpage";
-import { SignupPage } from "../pages/Signuppage";
-import { ConfirmationPage } from "../pages/Confirmationpage";
-import registerData from "../test-data/registerData.json";
-import { RegisterUser } from "../types/RegisterUser";
+import { test, expect } from "../fixtures/pomFixture";
 import { URLS } from "../config/urls";
 
+/**
+ * User Login flows — TC002 (valid), TC003 (invalid), TC004 (logout).
+ * TC002 / TC004 create a fresh user first so the tests are self-contained
+ * and don't depend on a shared static account.
+ */
 test.describe("User Login", () => {
-  let homePage: HomePage;
-  let loginPage: LoginPage;
-  let signupPage: SignupPage;
-  let confirmationPage: ConfirmationPage;
-  let user: RegisterUser;
-
-  test.beforeEach(async ({ page }) => {
-    homePage = new HomePage(page);
-    loginPage = new LoginPage(page);
-    signupPage = new SignupPage(page);
-    confirmationPage = new ConfirmationPage(page);
-
-    user = {
-      ...registerData,
-      email: `vivek${Date.now()}${Math.floor(Math.random() * 1000)}@test.com`,
-    } as RegisterUser;
-
+  test.beforeEach(async ({ page, homePage }) => {
     await homePage.navigate();
     await expect(page).toHaveURL(URLS.HOME);
     await expect(homePage.homePageLogo).toBeVisible();
@@ -32,39 +15,34 @@ test.describe("User Login", () => {
 
   test("TC002 - Login User with correct email and password", async ({
     page,
+    homePage,
+    loginPage,
+    signupPage,
+    confirmationPage,
+    registerUser,
   }) => {
-    await test.step("Open Signup / Login Page", async () => {
+    await test.step("Register a fresh user first", async () => {
       await homePage.openLoginPage();
       await expect(page).toHaveURL(URLS.LOGIN);
-      await expect(loginPage.newUserSignupHeading).toBeVisible();
-    });
-
-    await test.step("Register New User", async () => {
-      await loginPage.startSignup(user.name, user.email);
-      await signupPage.verifyPrefilledInformation(user);
-      await signupPage.fillAccountInformation(user);
+      await loginPage.startSignup(registerUser.name, registerUser.email);
+      await signupPage.verifyPrefilledInformation(registerUser);
+      await signupPage.fillAccountInformation(registerUser);
       await expect(confirmationPage.accountCreatedMessage).toBeVisible();
       await confirmationPage.continue();
+      await expect(homePage.loggedInUserLabel).toContainText(registerUser.name);
     });
 
-    await test.step("Verify Logged In User", async () => {
-      await expect(homePage.loggedInUserLabel).toContainText(user.name);
-    });
-
-    await test.step("Logout User", async () => {
+    await test.step("Logout to reach a clean login screen", async () => {
       await homePage.logout();
       await expect(page).toHaveURL(URLS.LOGIN);
     });
 
     await test.step("Login with valid credentials", async () => {
-      await loginPage.login(user.email, user.password);
+      await loginPage.login(registerUser.email, registerUser.password);
+      await expect(homePage.loggedInUserLabel).toContainText(registerUser.name);
     });
 
-    await test.step("Verify Logged In User Again", async () => {
-      await expect(homePage.loggedInUserLabel).toContainText(user.name);
-    });
-
-    await test.step("Delete Account", async () => {
+    await test.step("Cleanup: delete the account", async () => {
       await homePage.deleteAccount();
       await expect(confirmationPage.accountDeletedMessage).toBeVisible();
       await confirmationPage.continue();
@@ -73,50 +51,44 @@ test.describe("User Login", () => {
 
   test("TC003 - Login User with incorrect email and password", async ({
     page,
+    homePage,
+    loginPage,
   }) => {
-    await test.step("Open Signup / Login Page", async () => {
-      await homePage.openLoginPage();
-      await expect(page).toHaveURL(URLS.LOGIN);
-      await expect(loginPage.loginToYourAccountHeading).toBeVisible();
-    });
+    await homePage.openLoginPage();
+    await expect(page).toHaveURL(URLS.LOGIN);
+    await expect(loginPage.loginToYourAccountHeading).toBeVisible();
 
-    await test.step("Login with invalid credentials", async () => {
-      await loginPage.login("invalid@test.com", "WrongPassword123");
-    });
+    await loginPage.login("invalid@test.com", "WrongPassword123");
 
-    await test.step("Verify error message", async () => {
-      await expect(loginPage.loginErrorMessage).toBeVisible();
-      await expect(loginPage.loginErrorMessage).toHaveText(
-        "Your email or password is incorrect!",
-      );
-    });
+    await expect(loginPage.loginErrorMessage).toBeVisible();
+    await expect(loginPage.loginErrorMessage).toHaveText(
+      "Your email or password is incorrect!",
+    );
+    // Verify we did NOT navigate away from /login on failed auth.
+    await expect(page).toHaveURL(URLS.LOGIN);
   });
 
-  test("TC004 - Logout User", async ({ page }) => {
-    await test.step("Open Signup / Login Page", async () => {
+  test("TC004 - Logout User", async ({
+    page,
+    homePage,
+    loginPage,
+    signupPage,
+    confirmationPage,
+    registerUser,
+  }) => {
+    await test.step("Register a fresh user first", async () => {
       await homePage.openLoginPage();
       await expect(page).toHaveURL(URLS.LOGIN);
-      await expect(loginPage.newUserSignupHeading).toBeVisible();
-    });
-
-    await test.step("Register New User", async () => {
-      await loginPage.startSignup(user.name, user.email);
-      await signupPage.verifyPrefilledInformation(user);
-      await signupPage.fillAccountInformation(user);
+      await loginPage.startSignup(registerUser.name, registerUser.email);
+      await signupPage.verifyPrefilledInformation(registerUser);
+      await signupPage.fillAccountInformation(registerUser);
       await expect(confirmationPage.accountCreatedMessage).toBeVisible();
       await confirmationPage.continue();
+      await expect(homePage.loggedInUserLabel).toContainText(registerUser.name);
     });
 
-    await test.step("Verify Logged In User", async () => {
-      await expect(homePage.loggedInUserLabel).toBeVisible();
-      await expect(homePage.loggedInUserLabel).toContainText(user.name);
-    });
-
-    await test.step("Logout User", async () => {
+    await test.step("Logout and verify we land on the login screen", async () => {
       await homePage.logout();
-    });
-
-    await test.step("Verify Login Page", async () => {
       await expect(page).toHaveURL(URLS.LOGIN);
       await expect(loginPage.loginToYourAccountHeading).toBeVisible();
     });

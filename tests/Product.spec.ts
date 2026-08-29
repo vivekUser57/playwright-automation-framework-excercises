@@ -1,29 +1,14 @@
-import { test, expect } from "@playwright/test";
 import { faker } from "@faker-js/faker";
-import { HomePage } from "../pages/Homepage";
-import { ProductPage } from "../pages/ProductPage";
-import { CartPage } from "../pages/CartPage";
-import { AuthPage } from "../pages/AuthPage";
-import { CheckoutPage } from "../pages/CheckoutPage";
-import { PaymentPage } from "../pages/PaymentPage";
+import { test, expect } from "../fixtures/pomFixture";
 import { URLS } from "../config/urls";
 
-test.describe("Checkout", () => {
-  let homePage: HomePage;
-  let productPage: ProductPage;
-  let cartPage: CartPage;
-  let authPage: AuthPage;
-  let checkoutPage: CheckoutPage;
-  let paymentPage: PaymentPage;
-
-  test.beforeEach(async ({ page }) => {
-    homePage = new HomePage(page);
-    productPage = new ProductPage(page);
-    cartPage = new CartPage(page);
-    authPage = new AuthPage(page);
-    checkoutPage = new CheckoutPage(page);
-    paymentPage = new PaymentPage(page);
-
+/**
+ * Product catalog + cart flows.
+ * TC014 (Register-while-Checkout) intentionally lives only in Checkout.spec.ts
+ * to avoid duplicate execution.
+ */
+test.describe("Products & Cart", () => {
+  test.beforeEach(async ({ page, homePage }) => {
     await homePage.navigate();
     await expect(page).toHaveURL(URLS.HOME);
     await expect(homePage.homePageLogo).toBeVisible();
@@ -31,210 +16,247 @@ test.describe("Checkout", () => {
 
   test("TC008 - Verify All Products and product detail page", async ({
     page,
+    productPage,
   }) => {
     await productPage.openProducts();
-
     await expect(page).toHaveURL(URLS.PRODUCTS);
     await expect(productPage.allProductsHeading).toBeVisible();
-
     await expect(productPage.viewProductLinks.first()).toBeVisible();
 
     await productPage.openProduct(2);
-
     await expect(page).toHaveURL(/.*\/product_details/);
 
-    await productPage.printProductDetails();
-
-    await expect(productPage.productName).toBeVisible();
-    await expect(productPage.productCategory).toBeVisible();
-    await expect(productPage.productPrice).toBeVisible();
-    await expect(productPage.productAvailability).toBeVisible();
-    await expect(productPage.productCondition).toBeVisible();
-    await expect(productPage.productBrand).toBeVisible();
+    // Assert on the parsed content — visibility of empty containers isn't enough.
+    const details = await productPage.getProductDetails();
+    expect(details.name, "Product name should be non-empty").toBeTruthy();
+    expect(details.category, "Category should be non-empty").toBeTruthy();
+    expect(details.price, "Price should contain 'Rs.'").toContain("Rs.");
+    expect(details.availability, "Availability should be non-empty").toBeTruthy();
+    expect(details.condition, "Condition should be non-empty").toBeTruthy();
+    expect(details.brand, "Brand should be non-empty").toBeTruthy();
   });
 
-  test("TC009 - Search Product", async ({ page }) => {
+  test("TC009 - Search Product", async ({ page, productPage }) => {
     const searchText = "Top";
 
     await productPage.openProducts();
-
     await expect(page).toHaveURL(URLS.PRODUCTS);
-
     await expect(productPage.allProductsHeading).toBeVisible();
 
     await productPage.searchProduct(searchText);
-
     await expect(productPage.searchedProductsHeading).toHaveText(
       "Searched Products",
     );
 
+    // At least one match must actually be present.
+    const results = await productPage.getSearchedProducts();
+    expect(results.length, "Search should return at least one product").toBeGreaterThan(0);
+
     await productPage.verifyAverageSearchResult(searchText);
   });
 
-  test("TC012 - Add Products in Cart", async ({ page }) => {
+  test("TC012 - Add Products in Cart", async ({ page, productPage, cartPage }) => {
     await productPage.openProducts();
     await expect(page).toHaveURL(URLS.PRODUCTS);
     await expect(productPage.allProductsHeading).toBeVisible();
 
-    // Capture product name/price from the listing page BEFORE adding to cart,
-    // so the test doesn't depend on hardcoded product names.
-    const productInfo1 = await productPage.getProductCardInfo(1);
-    const productInfo2 = await productPage.getProductCardInfo(2);
+    // Capture name/price from the listing BEFORE adding — avoids hardcoded strings.
+    const info1 = await productPage.getProductCardInfo(1);
+    const info2 = await productPage.getProductCardInfo(2);
+    expect(info1.name, "Product 1 name should be readable").toBeTruthy();
+    expect(info2.name, "Product 2 name should be readable").toBeTruthy();
+    const { name: p1Name, price: p1Price } = info1 as { name: string; price: string };
+    const { name: p2Name, price: p2Price } = info2 as { name: string; price: string };
 
-    if (!productInfo1.name || !productInfo1.price) {
-      throw new Error("Could not read product 1's name/price from the listing page.");
-    }
-    if (!productInfo2.name || !productInfo2.price) {
-      throw new Error("Could not read product 2's name/price from the listing page.");
-    }
+    await productPage.addProductToCart(1);
+    await productPage.clickContinueShopping();
+    await productPage.addProductToCart(2);
 
-    // Destructure into locals so TypeScript narrows these as `string`, not `string | null`.
-    const { name: product1Name, price: product1Price } = productInfo1;
-    const { name: product2Name, price: product2Price } = productInfo2;
+    await cartPage.openCart();
+    await expect(page).toHaveURL(URLS.VIEW_CART);
+    await expect(cartPage.cartRows).toHaveCount(2);
 
-    console.log("Product 1 (from listing):", product1Name, product1Price);
-    console.log("Product 2 (from listing):", product2Name, product2Price);
+    // Unified row-based lookup for both products (consistent selector strategy).
+    const row1 = await cartPage.getCartRowDetails(p1Name);
+    const row2 = await cartPage.getCartRowDetails(p2Name);
 
-    // Add first product to cart, continue shopping
+    expect(row1.name).toBe(p1Name);
+    expect(row2.name).toBe(p2Name);
+    expect(row1.price).toBe(p1Price);
+    expect(row2.price).toBe(p2Price);
+    expect(row1.quantity).toBe("1");
+    expect(row2.quantity).toBe("1");
+    // With quantity=1 the line total equals the unit price.
+    expect(row1.total).toBe(p1Price);
+    expect(row2.total).toBe(p2Price);
+  });
+
+  test("TC013 - Verify Product quantity in Cart", async ({
+    page,
+    productPage,
+    cartPage,
+  }) => {
+    const desiredQuantity = 4;
+
+    await productPage.openProduct(1);
+    await expect(page).toHaveURL(/.*product_details/);
+
+    // Capture the product name from the detail page so we can assert on the cart row.
+    const detailName = (await productPage.productName.textContent())?.trim() ?? "";
+    expect(detailName, "Detail-page product name should be readable").toBeTruthy();
+
+    await productPage.setQuantity(desiredQuantity);
+    await productPage.addCurrentProductToCart();
+    await productPage.openViewCart();
+    await expect(page).toHaveURL(URLS.VIEW_CART);
+
+    const row = await cartPage.getCartRowDetails(detailName);
+    expect(row.name).toBe(detailName);
+    expect(row.quantity).toBe(String(desiredQuantity));
+  });
+
+  test("TC017 - Remove Products From Cart", async ({ page, productPage, cartPage }) => {
+    await productPage.openProducts();
+    await expect(page).toHaveURL(URLS.PRODUCTS);
+
+    // Capture name upfront so we can identify (and remove) the correct cart row.
+    const info = await productPage.getProductCardInfo(1);
+    expect(info.name, "Product 1 name should be readable").toBeTruthy();
+
     await productPage.addProductToCart(1);
     await productPage.clickContinueShopping();
 
-    // Add second product to cart
-    await productPage.addProductToCart(2);
     await cartPage.openCart();
     await expect(page).toHaveURL(URLS.VIEW_CART);
-    await expect(page.getByRole("heading", { name: product1Name })).toBeVisible();
-    await expect(page.getByRole("link", { name: product2Name })).toBeVisible();
-    await cartPage.printCartRowDetails(product1Name);
-    await cartPage.printCartRowDetails(product2Name);
+    await expect(cartPage.cartRows).toHaveCount(1);
 
-    const cartProduct1 = await cartPage.getCartRowDetails(product1Name);
-    const cartProduct2 = await cartPage.getCartRowDetails(product2Name);
-
-    expect(cartProduct1.price).toBe(product1Price);
-    expect(cartProduct2.price).toBe(product2Price);
-    expect(cartProduct1.quantity).toBe("1");
-    expect(cartProduct2.quantity).toBe("1");
-    expect(cartProduct1.total).toBe(product1Price);
-    expect(cartProduct2.total).toBe(product2Price);
+    await cartPage.removeProduct(info.name as string);
+    await expect(cartPage.emptyCartMessage).toBeVisible();
   });
 
-  test("TC013 - Verify Product quantity in Cart", async ({ page }) => {
-    await homePage.navigate();
-    await expect(page).toHaveURL(URLS.HOME);
-    await expect(homePage.homePageLogo).toBeVisible();
-    await productPage.openProduct(1);
-    await expect(page).toHaveURL(/.*product_details/);
-    await productPage.setQuantity(4);
-    await productPage.addCurrentProductToCart();
-    await cartPage.openCart();
-    await expect(page).toHaveURL(URLS.VIEW_CART);
-    const quantity = await cartPage.getProductQuantity(1);
+  test("TC018 - View Category Products", async ({ page, productPage }) => {
+    await productPage.openProducts();
+    await expect(productPage.categoriesHeading).toBeVisible();
 
-    expect(quantity).toBe("4");
+    await productPage.openSubcategory("Women", "Dress");
+    await expect(page).toHaveURL(/\/category_products\/\d+/);
+    await expect(productPage.categoryPageHeading).toContainText(/WOMEN\s*-\s*DRESS/i);
+
+    await productPage.openSubcategory("Men", "Tshirts");
+    await expect(page).toHaveURL(/\/category_products\/\d+/);
+    await expect(productPage.categoryPageHeading).toContainText(/MEN\s*-\s*TSHIRTS/i);
   });
 
-  test("TC014 - Place Order: Register while Checkout", async ({ page }) => {
-    // faker.string.uuid() in the email guarantees no collisions across
-    // repeated/parallel runs, since the site rejects duplicate emails.
-    const firstName = faker.person.firstName();
-    const lastName = faker.person.lastName();
-    const fullName = `${firstName} ${lastName}`;
-    const email = `qa.${faker.string.uuid()}@example.com`;
+  test("TC019 - View & Cart Brand Products", async ({ page, productPage }) => {
+    await productPage.openProducts();
+    await expect(productPage.brandsHeading).toBeVisible();
 
+    await productPage.openBrand("Polo");
+    await expect(page).toHaveURL(/\/brand_products\/Polo/);
+    await expect(productPage.categoryPageHeading).toContainText(/POLO/i);
+
+    await productPage.openBrand("Madame");
+    await expect(page).toHaveURL(/\/brand_products\/Madame/);
+    await expect(productPage.categoryPageHeading).toContainText(/MADAME/i);
+  });
+
+  test("TC020 - Search Products and Verify Cart After Login", async ({
+    page,
+    homePage,
+    loginPage,
+    signupPage,
+    confirmationPage,
+    productPage,
+    cartPage,
+    registerUser,
+  }) => {
     let accountCreated = false;
-
     try {
-      await test.step("Add product to cart", async () => {
-        await productPage.openProducts();
-        await expect(page).toHaveURL(URLS.PRODUCTS);
-        await productPage.addProductToCart(1);
-        await productPage.clickContinueShopping();
-      });
-
-      await test.step("Go to cart and verify cart page", async () => {
-        await cartPage.openCart();
-        await expect(page).toHaveURL(URLS.VIEW_CART);
-      });
-
-      await test.step("Proceed to checkout and click Register/Login", async () => {
-        await cartPage.proceedToCheckout();
-        await cartPage.clickRegisterLogin();
-        await expect(page).toHaveURL(/.*\/login/);
-      });
-
-      await test.step("Fill signup form and create account", async () => {
-        await authPage.signup(fullName, email);
-
-        await authPage.fillAccountInformation({
-          password: faker.internet.password({ length: 12 }),
-          day: String(faker.number.int({ min: 1, max: 28 })),
-          month: String(faker.number.int({ min: 1, max: 12 })),
-          year: String(faker.number.int({ min: 1970, max: 2005 })),
-          firstName,
-          lastName,
-          address: faker.location.streetAddress(),
-          country: "United States",
-          state: faker.location.state(),
-          city: faker.location.city(),
-          zipcode: faker.location.zipCode(),
-          mobileNumber: faker.phone.number(),
-        });
-
-        await authPage.submitAccountCreation();
-      });
-
-      await test.step("Verify 'ACCOUNT CREATED!' and click Continue", async () => {
-        await expect(authPage.accountCreatedText).toBeVisible();
+      await test.step("Register a fresh user (for the login step later)", async () => {
+        await homePage.openLoginPage();
+        await loginPage.startSignup(registerUser.name, registerUser.email);
+        await signupPage.fillAccountInformation(registerUser);
+        await expect(confirmationPage.accountCreatedMessage).toBeVisible();
         accountCreated = true;
-        await authPage.clickContinue();
+        await confirmationPage.continue();
+        await expect(homePage.loggedInUserLabel).toContainText(registerUser.name);
       });
 
-      await test.step("Verify 'Logged in as' username at top", async () => {
-        await expect(homePage.loggedInAsText).toContainText(fullName);
-      });
+      await test.step("Logout, search, and add every result to the cart", async () => {
+        await homePage.logout();
+        await productPage.openProducts();
+        await productPage.searchProduct("Top");
+        await expect(productPage.searchedProductsHeading).toBeVisible();
+        const addedNames = await productPage.addAllSearchedProductsToCart();
+        expect(addedNames.length, "Should have added at least one product").toBeGreaterThan(0);
 
-      await test.step("Go back to cart and proceed to checkout", async () => {
         await cartPage.openCart();
         await expect(page).toHaveURL(URLS.VIEW_CART);
-        await cartPage.proceedToCheckout();
-        await expect(page).toHaveURL(URLS.CHECKOUT);
+        await expect(cartPage.cartRows).toHaveCount(addedNames.length);
+
+        // Stash for the login-and-verify phase.
+        (test.info() as { attach?: unknown } & Record<string, unknown>).addedNames = addedNames;
       });
 
-      await test.step("Verify address details and order review", async () => {
-        await checkoutPage.verifyAddressAndOrderVisible();
-      });
+      await test.step("Log back in and verify the cart still contains the added items", async () => {
+        await homePage.openLoginPage();
+        await loginPage.login(registerUser.email, registerUser.password);
+        await expect(homePage.loggedInUserLabel).toContainText(registerUser.name);
+        await cartPage.openCart();
+        await expect(page).toHaveURL(URLS.VIEW_CART);
 
-      await test.step("Enter comment and place order", async () => {
-        await checkoutPage.enterComment(faker.lorem.sentence());
-        await checkoutPage.placeOrder();
-        await expect(page).toHaveURL(URLS.PAYMENT);
-      });
-
-      await test.step("Enter payment details and confirm order", async () => {
-        await paymentPage.fillPaymentDetails({
-          nameOnCard: fullName,
-          cardNumber: "4111111111111111", // Luhn-valid dummy Visa, kept static intentionally
-          cvc: String(faker.number.int({ min: 100, max: 999 })),
-          expiryMonth: "12",
-          expiryYear: "2028",
-        });
-        await paymentPage.payAndConfirmOrder();
-      });
-
-      await test.step("Verify order success message", async () => {
-        await expect(paymentPage.orderSuccessMessage).toContainText(
-          "Your order has been placed successfully!",
-        );
+        const addedNames = (test.info() as unknown as { addedNames: string[] }).addedNames;
+        for (const name of addedNames) {
+          await expect(cartPage.getRowByProductName(name)).toBeVisible();
+        }
       });
     } finally {
       if (accountCreated) {
-        await test.step("Cleanup: delete test account", async () => {
-          await homePage.deleteAccountLink.click();
-          await expect(authPage.accountDeletedText).toBeVisible();
-          await authPage.clickContinue();
+        await test.step("Cleanup: delete the test account", async () => {
+          await homePage.deleteAccount();
+          await expect(confirmationPage.accountDeletedMessage).toBeVisible();
+          await confirmationPage.continue();
         });
       }
     }
+  });
+
+  test("TC021 - Add review on product", async ({ page, productPage }) => {
+    await productPage.openProducts();
+    await expect(page).toHaveURL(URLS.PRODUCTS);
+
+    await productPage.openProduct(1);
+    await expect(page).toHaveURL(/.*product_details/);
+    await expect(productPage.writeYourReviewHeading).toBeVisible();
+
+    await productPage.submitReview({
+      name: faker.person.fullName(),
+      email: faker.internet.email(),
+      review: faker.lorem.sentences(2),
+    });
+
+    await expect(productPage.reviewSuccessMessage).toBeVisible();
+  });
+
+  test("TC022 - Add to cart from Recommended items", async ({
+    page,
+    homePage,
+    productPage,
+    cartPage,
+  }) => {
+    // Home page is already loaded by beforeEach; scroll to the "Recommended items" band.
+    await homePage.scrollToBottom();
+    await expect(homePage.recommendedItemsHeading).toBeVisible();
+
+    // Capture the name BEFORE clicking so we can assert its cart presence later.
+    const recommendedName = await homePage.getRecommendedItemName(1);
+    expect(recommendedName, "Recommended item name should be readable").toBeTruthy();
+
+    await homePage.addRecommendedItemToCart(1);
+    await productPage.clickContinueShopping();
+
+    await cartPage.openCart();
+    await expect(page).toHaveURL(URLS.VIEW_CART);
+    await expect(cartPage.getRowByProductName(recommendedName)).toBeVisible();
   });
 });

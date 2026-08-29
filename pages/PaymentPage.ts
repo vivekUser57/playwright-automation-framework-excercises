@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import { Download, Locator, Page } from "@playwright/test";
 import { BasePage } from "./BasePage";
 
 export interface PaymentDetails {
@@ -17,6 +17,8 @@ export class PaymentPage extends BasePage {
   readonly expiryYearInput: Locator;
   readonly payAndConfirmButton: Locator;
   readonly orderSuccessMessage: Locator;
+  readonly downloadInvoiceButton: Locator;
+  readonly continueButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -26,7 +28,16 @@ export class PaymentPage extends BasePage {
     this.expiryMonthInput = page.locator('input[name="expiry_month"]');
     this.expiryYearInput = page.locator('input[name="expiry_year"]');
     this.payAndConfirmButton = page.getByRole("button", { name: "Pay and Confirm Order" });
-    this.orderSuccessMessage = page.locator("#success_message");
+    // The real post-payment message on automationexercise is:
+    //   "Congratulations! Your order has been confirmed!"
+    // rendered inside a <b> tag — #success_message is not present on that page.
+    this.orderSuccessMessage = page.getByText(
+      /Congratulations!\s*Your order has been confirmed/i,
+    );
+    this.downloadInvoiceButton = page.getByRole("link", {
+      name: /download invoice/i,
+    });
+    this.continueButton = page.getByRole("link", { name: "Continue" });
   }
 
   async fillPaymentDetails(details: PaymentDetails): Promise<void> {
@@ -39,5 +50,21 @@ export class PaymentPage extends BasePage {
 
   async payAndConfirmOrder(): Promise<void> {
     await this.payAndConfirmButton.click();
+  }
+
+  /**
+   * Clicks the Download Invoice link and returns the Download handle.
+   * Used by TC024 to assert an invoice file was produced.
+   */
+  async downloadInvoice(): Promise<Download> {
+    const [download] = await Promise.all([
+      this.page.waitForEvent("download"),
+      this.downloadInvoiceButton.click(),
+    ]);
+    return download;
+  }
+
+  async clickContinue(): Promise<void> {
+    await this.continueButton.click();
   }
 }

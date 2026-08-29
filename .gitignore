@@ -6,3 +6,14 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# macOS junk
+.DS_Store
+
+# Auto-generated HTML report (regenerated on every `npm test`)
+/report/
+!/report/.gitkeep
+
+# Allure output
+/allure-results/
+/allure-report/

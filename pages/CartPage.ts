@@ -14,12 +14,15 @@ export class CartPage extends BasePage {
   readonly cartRows: Locator;
   readonly proceedToCheckoutButton: Locator;
   readonly registerLoginLink: Locator;
+  readonly emptyCartMessage: Locator;
 
   constructor(page: Page) {
     super(page);
 
-    // Navbar "Cart" link — scoped to role to avoid matching stray text elsewhere
-    this.cartLink = page.getByRole("link", { name: "Cart" });
+    // Scope to the navbar (`.shop-menu`) so the selector doesn't also match the
+    // "View Cart" pop-up button after add-to-cart, or the Google ad overlay
+    // that occasionally injects a role="link" element with "Cart" in its label.
+    this.cartLink = page.locator(".shop-menu a[href='/view_cart']");
 
     this.cartRows = page.locator("#cart_info_table tbody tr");
 
@@ -31,6 +34,9 @@ export class CartPage extends BasePage {
     this.registerLoginLink = page
       .locator("#checkoutModal")
       .getByRole("link", { name: "Register / Login" });
+
+    // Empty-cart panel shown by the site when the last row is removed.
+    this.emptyCartMessage = page.locator("#empty_cart");
   }
 
   /**
@@ -39,9 +45,22 @@ export class CartPage extends BasePage {
    * duplicate openCart()/openCartLink() methods.
    */
   async openCart(): Promise<void> {
+    // The site's add-to-cart modal (#cartModal) intercepts pointer events on
+    // the navbar. Close it if present before clicking the Cart link.
+    await this.dismissCartModal();
     await this.cartLink.scrollIntoViewIfNeeded();
     await this.cartLink.waitFor({ state: "visible", timeout: 10000 });
     await this.cartLink.click();
+  }
+
+  /** Close the add-to-cart confirmation modal if it happens to be open. */
+  private async dismissCartModal(): Promise<void> {
+    const modal = this.page.locator("#cartModal.show");
+    if (await modal.isVisible().catch(() => false)) {
+      const continueBtn = modal.getByRole("button", { name: "Continue Shopping" });
+      await continueBtn.click({ timeout: 5000 }).catch(() => {});
+      await modal.waitFor({ state: "hidden", timeout: 5000 }).catch(() => {});
+    }
   }
 
   async proceedToCheckout(): Promise<void> {
@@ -91,5 +110,13 @@ export class CartPage extends BasePage {
     console.log("Price:", details.price);
     console.log("Quantity:", details.quantity);
     console.log("Total:", details.total);
+  }
+
+  /** Click the delete (×) icon on the row matching this product name (TC017). */
+  async removeProduct(productName: string): Promise<void> {
+    const row = this.getRowByProductName(productName);
+    await row.locator(".cart_quantity_delete").click();
+    // Best-effort: wait for the row to disappear.
+    await row.waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
   }
 }
